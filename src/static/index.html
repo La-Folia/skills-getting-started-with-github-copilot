@@ -1,50 +1,208 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Mergington High School Activities</title>
-    <link rel="stylesheet" href="styles.css" />
+    <title>Mergington High — Activities</title>
+    <style>
+      /* 기본 레이아웃 */
+      body {
+        font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial;
+        background: linear-gradient(180deg, #f6fbff 0%, #ffffff 100%);
+        margin: 0;
+        padding: 24px;
+        color: #1f2937;
+      }
+      header {
+        text-align: center;
+        margin-bottom: 18px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 1.6rem;
+        color: #0f172a;
+      }
+
+      /* 카드 그리드 */
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 16px;
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+
+      .card {
+        background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+        border: 1px solid rgba(15, 23, 42, 0.04);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        transition:
+          transform 0.15s ease,
+          box-shadow 0.15s ease;
+      }
+      .card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.10);
+      }
+
+      .card h3 {
+        margin: 0;
+        font-size: 1.1rem;
+        color: #0b1220;
+      }
+      .meta {
+        font-size: 0.9rem;
+        color: #475569;
+      }
+      .schedule {
+        font-size: 0.85rem;
+        color: #64748b;
+      }
+
+      .spots {
+        margin-left: auto;
+        font-weight: 600;
+        color: #0f172a;
+        font-size: 0.9rem;
+      }
+
+      .participants {
+        margin-top: 6px;
+        border-top: 1px dashed rgba(15, 23, 42, 0.06);
+        padding-top: 10px;
+      }
+      .participants h4 {
+        margin: 0 0 6px 0;
+        font-size: 0.95rem;
+        color: #0b1220;
+      }
+      .participants ul {
+        margin: 0;
+        padding-left: 20px;
+        display: block;
+      }
+      .participants li {
+        margin: 6px 0;
+        font-size: 0.88rem;
+        color: #334155;
+        line-height: 1.3;
+        position: relative;
+      }
+      .participants li::marker {
+        color: #2563eb;
+      }
+      .participants .empty {
+        color: #94a3b8;
+        font-style: italic;
+      }
+
+      .footer {
+        text-align: center;
+        margin-top: 18px;
+        color: #94a3b8;
+        font-size: 0.9rem;
+      }
+    </style>
   </head>
   <body>
     <header>
-      <h1>Mergington High School</h1>
-      <h2>Extracurricular Activities</h2>
+      <h1>Mergington High — Extracurricular Activities</h1>
+      <p class="meta">
+        아래 카드에서 활동 정보를 확인하고 참가자 목록을 볼 수 있습니다.
+      </p>
     </header>
 
     <main>
-      <section id="activities-container">
-        <h3>Available Activities</h3>
-        <div id="activities-list">
-          <!-- Activities will be loaded here -->
-          <p>Loading activities...</p>
-        </div>
+      <section class="grid" id="activitiesGrid">
+        <!-- 활동 카드가 여기 렌더링됩니다 -->
       </section>
-
-      <section id="signup-container">
-        <h3>Sign Up for an Activity</h3>
-        <form id="signup-form">
-          <div class="form-group">
-            <label for="email">Student Email:</label>
-            <input type="email" id="email" required placeholder="your-email@mergington.edu" />
-          </div>
-          <div class="form-group">
-            <label for="activity">Select Activity:</label>
-            <select id="activity" required>
-              <option value="">-- Select an activity --</option>
-              <!-- Activity options will be loaded here -->
-            </select>
-          </div>
-          <button type="submit">Sign Up</button>
-        </form>
-        <div id="message" class="hidden"></div>
-      </section>
+      <div class="footer">
+        데이터는 서버의 /activities 엔드포인트에서 로드됩니다.
+      </div>
     </main>
 
-    <footer>
-      <p>&copy; 2023 Mergington High School</p>
-    </footer>
+    <script>
+      // 안전하게 텍스트 노드를 추가하는 헬퍼
+      function el(type, text, className) {
+        const e = document.createElement(type);
+        if (className) e.className = className;
+        if (text !== undefined) e.textContent = text;
+        return e;
+      }
 
-    <script src="app.js"></script>
+      async function loadActivities() {
+        try {
+          const res = await fetch("/activities");
+          if (!res.ok) throw new Error("Failed to fetch activities");
+          const data = await res.json();
+          renderActivities(data);
+        } catch (err) {
+          const area = document.getElementById("activitiesGrid");
+          area.appendChild(
+            el("div", "활동을 불러오는 중 오류가 발생했습니다.", "meta")
+          );
+          console.error(err);
+        }
+      }
+
+      function renderActivities(data) {
+        const grid = document.getElementById("activitiesGrid");
+        grid.innerHTML = ""; // 초기화
+
+        Object.entries(data).forEach(([name, info]) => {
+          const card = document.createElement("article");
+          card.className = "card";
+
+          // 헤더: 이름 + spots
+          const headerRow = document.createElement("div");
+          headerRow.style.display = "flex";
+          headerRow.style.alignItems = "baseline";
+          headerRow.style.gap = "8px";
+
+          headerRow.appendChild(el("h3", name));
+          const spots = el(
+            "div",
+            `${info.participants.length} / ${info.max_participants} spots`,
+            "spots"
+          );
+          headerRow.appendChild(spots);
+          card.appendChild(headerRow);
+
+          // 설명, 일정
+          if (info.description)
+            card.appendChild(el("div", info.description, "meta"));
+          if (info.schedule) card.appendChild(el("div", info.schedule, "schedule"));
+
+          // 참가자 섹션
+          const part = document.createElement("div");
+          part.className = "participants";
+          part.appendChild(el("h4", "Participants"));
+
+          const ul = document.createElement("ul");
+          if (Array.isArray(info.participants) && info.participants.length > 0) {
+            info.participants.forEach((p) => {
+              const li = document.createElement("li");
+              li.textContent = p;
+              ul.appendChild(li);
+            });
+          } else {
+            const li = el("li", "No participants yet", "empty");
+            ul.appendChild(li);
+          }
+          part.appendChild(ul);
+          card.appendChild(part);
+
+          grid.appendChild(card);
+        });
+      }
+
+      // 초기 로드
+      loadActivities();
+    </script>
   </body>
 </html>
